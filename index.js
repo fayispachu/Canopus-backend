@@ -13,10 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
-app.use(cors({
-  origin: "https://canopus-frontend.vercel.app",
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 connectDB();
