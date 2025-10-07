@@ -8,7 +8,6 @@ import GalleryRouter from "./routes/Gallery.route.js";
 import MenuRouter from "./routes/Menu.route.js";
 import AttendanceRouter from "./routes/Attendance.route.js";
 import BookingRouter from "./routes/Booking.route.js";
-import Work from "./models/Work.model.js";
 import WorkRouter from "./routes/Work.route.js";
 
 dotenv.config();
@@ -19,7 +18,7 @@ const PORT = process.env.PORT || 4000;
 // Middleware
 app.use(
   cors({
-    origin: ["https://canopus-frontend-beta.vercel.app", "http://localhost:5173"],
+    origin: ["https://canopus-frontend-eta.vercel.app", "http://localhost:5173"],
     credentials: true,
   })
 );
