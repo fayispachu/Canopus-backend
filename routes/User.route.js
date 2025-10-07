@@ -3,32 +3,26 @@ import {
   createUser,
   loginUser,
   getUser,
-  getAllUsers,
   updateUser,
-
-  addBooking,
   updateNotifications,
-  updateBooking,
-  deleteBooking,
+  getAllUsers,
 } from "../controller/User.controller.js";
+import { authorize, protect } from "../middleware/AuthMiddleWare.js";
 
 const UserRouter = express.Router();
 
-// Auth
+// Public routes
 UserRouter.post("/register", createUser);
 UserRouter.post("/login", loginUser);
 
-// User info
-UserRouter.get("/profile/:id", getUser);
-UserRouter.get("/users", getAllUsers);
+// Protected routes
+UserRouter.use(protect);
 
-// Profile & Settings
+UserRouter.get("/profile/:id", getUser);
 UserRouter.put("/profile/:id", updateUser);
 UserRouter.put("/profile/:id/notifications", updateNotifications);
 
-UserRouter.post("/profile/:id/bookings", addBooking);
-UserRouter.put("/profile/:id/bookings/:bookingId", updateBooking);
+// Admin-only
+UserRouter.get("/users", authorize("admin", "manager"), getAllUsers);
 
-// Delete a booking
-UserRouter.delete("/profile/:id/bookings/:bookingId", deleteBooking);
 export default UserRouter;

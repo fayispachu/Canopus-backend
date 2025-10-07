@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
     email: {
       type: String,
       required: true,
@@ -14,43 +10,19 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-    },
+    password: { type: String, required: true, minlength: 6 },
     role: {
       type: String,
-      enum: ["admin", "staff", "customer"],
-      default: "customer",
+      enum: ["admin", "manager", "staff", "customer"],
+      default: "staff",
     },
-    attendance: {
-      type: Boolean,
-      default: false,
-    },
-    image: {
-      type: String,
-      default: "",
-    },
+    profilePic: { type: String, default: "" },
 
-    // Bookings / Events
-    bookings: [
-      {
-        event: { type: String, required: true },
-        place: { type: String, default: "" },
-        phone: { type: String, default: "" },
-        date: { type: Date, required: true },
-        guests: { type: Number, default: 0 },
-        items: [
-          {
-            name: String,
-            desc: String,
-          },
-        ],
-      },
-    ],
+    // Staff-specific
+    isPresent: { type: Boolean, default: false },
+    assignedWorks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Work" }],
 
-    //  Optional Notification Preferences
+    // Notification preferences
     notifications: {
       email: { type: Boolean, default: true },
       whatsapp: { type: Boolean, default: true },
