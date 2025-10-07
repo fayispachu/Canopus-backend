@@ -48,9 +48,11 @@ app.use("/api/work", WorkRouter);
 app.use(express.static(path.join(__dirname, "client/dist")));
 
 // All other routes serve index.html
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "client/dist", "index.html"));
+// Catch-all route for React Router
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/dist', 'index.html'));
 });
+
 
 // Start server
 app.listen(PORT, () => {
