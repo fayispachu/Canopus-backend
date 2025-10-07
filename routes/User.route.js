@@ -7,7 +7,7 @@ import {
   updateNotifications,
   getAllUsers,
 } from "../controller/User.controller.js";
-import { authorize, protect } from "../middleware/AuthMiddleware.js";
+import { authorize, protect } from "../middleware/authMiddlewares.js";
 
 const UserRouter = express.Router();
 

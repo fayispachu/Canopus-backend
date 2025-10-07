@@ -9,7 +9,7 @@ import {
   requestCancelBooking,
   updateBooking,
 } from "../controller/Booking.controller.js";
-import { protect } from "../middleware/AuthMiddleware.js";
+import { protect } from "../middleware/authMiddlewares.js";
 
 const BookingRouter = express.Router();
 
