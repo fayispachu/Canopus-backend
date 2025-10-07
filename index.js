@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 4000;
 // Middleware
 app.use(
   cors({
-    origin: ["https://canopus-frontend.vercel.app", "http://localhost:5173"],
+    origin: ["https://canopus-frontend-beta.vercel.app", "http://localhost:5173"],
     credentials: true,
   })
 );
