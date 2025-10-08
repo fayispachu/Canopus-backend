@@ -1,8 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 import connectDB from "./database/DBConnection.js";
 import UserRouter from "./routes/User.route.js";
@@ -16,10 +14,6 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-
-// Needed for ES modules to get __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Middleware
 app.use(
@@ -45,12 +39,6 @@ app.use("/api/booking", BookingRouter);
 app.use("/api/work", WorkRouter);
 
 // Serve React client build
-app.use(express.static(path.join(__dirname, "client/dist")));
-
-// Catch-all route for React Router (works in Express 5+)
-app.get(/^\/.*$/, (req, res) => {
-  res.sendFile(path.join(__dirname, "client/dist", "index.html"));
-});
 
 // Start server
 app.listen(PORT, () => {
