@@ -19,7 +19,6 @@ const userSchema = new mongoose.Schema(
     profilePic: { type: String, default: "" },
 
     // Staff-specific
-    isPresent: { type: Boolean, default: false },
     assignedWorks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Work" }],
 
     // Notification preferences

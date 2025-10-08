@@ -8,7 +8,7 @@ const generateToken = (id) => {
 };
 
 // REGISTER USER
-export const createUser = async (req, res) => {
+export const registerUser = async (req, res) => {
   try {
     const { name, email, password, role, image, notifications } = req.body;
 
@@ -22,7 +22,7 @@ export const createUser = async (req, res) => {
       email: email.toLowerCase(),
       password: hashedPassword,
       role: role || "staff",
-      image: image || "",
+      profilePic: image || "",
       notifications: notifications || { email: true, whatsapp: true },
     });
 
@@ -36,12 +36,10 @@ export const createUser = async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
-        bookings: newUser.bookings,
         notifications: newUser.notifications,
       },
     });
   } catch (err) {
-    // Catch duplicate key error
     if (err.code === 11000 && err.keyValue.email) {
       return res.status(400).json({ message: "Email already exists" });
     }
@@ -70,7 +68,6 @@ export const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        bookings: user.bookings,
         notifications: user.notifications,
       },
     });
@@ -131,12 +128,60 @@ export const updateNotifications = async (req, res) => {
   }
 };
 
-// GET ALL USERS (Admin only)
+// GET USERS BY ROLE
+export const getSomeUser = async (req, res) => {
+  try {
+    const users = await User.find({
+      role: { $in: ["staff", "manager", "admin"] },
+    }).select("-password");
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET ALL USERS
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password");
     res.status(200).json(users);
   } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+export const createUser = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role: role.toLowerCase(), // ensure it matches enum
+    });
+
+    await newUser.save();
+
+    res
+      .status(201)
+      .json({ message: "User created successfully", user: newUser });
+  } catch (err) {
+    console.error("Create User Error:", err);
     res.status(500).json({ message: err.message });
   }
 };

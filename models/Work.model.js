@@ -13,8 +13,12 @@ const workSchema = new mongoose.Schema(
     },
     assignedTo: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User", // links to staff
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // staff
+        status: {
+          type: String,
+          enum: ["pending", "ready", "leave"], // individual status
+          default: "pending",
+        },
       },
     ],
     createdBy: {
