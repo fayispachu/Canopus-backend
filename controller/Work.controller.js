@@ -10,21 +10,35 @@ export const createWork = async (req, res) => {
 
     if (!title) return res.status(400).json({ message: "Title is required" });
 
-    // Ensure assignedTo is an array of ObjectId
+    console.log("AssignedTo received from client:", assignedTo);
+
+    // Ensure assignedTo is an array of valid ObjectId
     const assignedArray = (
       Array.isArray(assignedTo) ? assignedTo : [assignedTo]
     )
-      .filter(Boolean)
+      .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
       .map((id) => new mongoose.Types.ObjectId(id));
+
+    console.log("Validated ObjectId array:", assignedArray);
+
+    if (assignedArray.length === 0) {
+      console.warn("No valid staff IDs provided");
+      return res.status(400).json({ message: "Invalid staff IDs provided" });
+    }
 
     const newWork = new Work({
       title,
       description,
-      assignedTo: assignedArray,
+      assignedTo: assignedArray.map((id) => ({ user: id })), // store as objects
       createdBy,
       dueDate,
     });
+
+    console.log(assignedTo.name, "assigned to:", assignedArray.length, "staff");
+    
+
     await newWork.save();
+    console.log("New work created:", newWork);
 
     // Push work to assigned staff and send email notifications
     if (assignedArray.length > 0) {
@@ -35,9 +49,10 @@ export const createWork = async (req, res) => {
 
       const assignedUsers = await User.find({ _id: { $in: assignedArray } });
       assignedUsers.forEach((user) => {
+        console.log("Sending email to:", user.email);
         if (user.email) {
           const subject = `New Work Assigned: ${title}`;
-          const text = `Hi ${user.name},\n\nYou have been assigned a new work.\n\nPlease confirm if you are ready to work.\n\nThanks.`;
+          const text = `Hi ${user.name},\n\nYou have been assigned a new work.\nPlease confirm if you are ready to work.\n\nThanks.`;
           sendEmail(user.email, subject, text).catch((err) => {
             console.error(`Failed to send email to ${user.email}:`, err);
           });
@@ -58,8 +73,9 @@ export const createWork = async (req, res) => {
 export const getAllWorks = async (req, res) => {
   try {
     const works = await Work.find()
-      .populate("assignedTo", "name role profilePic email")
+      .populate("assignedTo.user", "name role profilePic email")
       .populate("createdBy", "name role");
+    console.log("Fetched works:", works.length);
     res.status(200).json(works);
   } catch (err) {
     console.error(err);
@@ -72,27 +88,33 @@ export const updateWork = async (req, res) => {
   const { id } = req.params;
   try {
     if (req.body.assignedTo) {
+      console.log("AssignedTo update received:", req.body.assignedTo);
+
       req.body.assignedTo = (
         Array.isArray(req.body.assignedTo)
           ? req.body.assignedTo
           : [req.body.assignedTo]
       )
-        .filter(Boolean)
-        .map((id) => new mongoose.Types.ObjectId(id));
+        .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+        .map((id) => ({ user: new mongoose.Types.ObjectId(id) }));
+
+      console.log("Validated assignedTo for update:", req.body.assignedTo);
     }
 
     const updatedWork = await Work.findByIdAndUpdate(id, req.body, {
       new: true,
     })
-      .populate("assignedTo", "name role profilePic email")
+      .populate("assignedTo.user", "name role profilePic email")
       .populate("createdBy", "name role");
 
     if (!updatedWork)
       return res.status(404).json({ message: "Work not found" });
 
+    console.log("Updated work:", updatedWork);
+
     res.json({ message: "Work updated", work: updatedWork });
   } catch (err) {
-    console.error(err);
+    console.error("Update Work Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -109,9 +131,10 @@ export const deleteWork = async (req, res) => {
       { $pull: { assignedWorks: work._id } }
     );
 
+    console.log("Deleted work:", work._id);
     res.json({ message: "Work deleted" });
   } catch (err) {
-    console.error(err);
+    console.error("Delete Work Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -128,7 +151,9 @@ export const markUserStatus = async (req, res) => {
     const work = await Work.findById(workId);
     if (!work) return res.status(404).json({ message: "Work not found" });
 
-    const index = work.assignedUsersStatus.findIndex(
+    console.log("Marking status for user:", userId, "to:", status);
+
+    const index = work.assignedTo.findIndex(
       (u) => u.user.toString() === userId
     );
     if (index === -1)
@@ -136,12 +161,14 @@ export const markUserStatus = async (req, res) => {
         .status(400)
         .json({ message: "User not assigned to this work" });
 
-    work.assignedUsersStatus[index].status = status;
+    work.assignedTo[index].status = status;
     await work.save();
+
+    console.log("Updated work after status change:", work._id);
 
     res.status(200).json({ message: "Status updated", work });
   } catch (err) {
-    console.error(err);
+    console.error("Mark User Status Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -151,14 +178,16 @@ export const getWorkWithStatus = async (req, res) => {
   const { id } = req.params;
   try {
     const work = await Work.findById(id)
-      .populate("assignedTo", "name profilePic role email")
+      .populate("assignedTo.user", "name profilePic role email")
       .populate("createdBy", "name role");
 
     if (!work) return res.status(404).json({ message: "Work not found" });
 
+    console.log("Fetched work with status:", work._id);
+
     res.status(200).json(work);
   } catch (err) {
-    console.error(err);
+    console.error("Get Work With Status Error:", err);
     res.status(500).json({ message: err.message });
   }
 };

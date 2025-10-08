@@ -1,14 +1,28 @@
 import Booking from "../models/Booking.model.js";
 import User from "../models/User.model.js";
 
-// Create a new booking
+// =============================
+// 🟢 CREATE BOOKING
+// =============================
 export const createBooking = async (req, res) => {
   try {
-    const { customerId, event, place, phone, date, guests, items } = req.body;
+    const {
+      customerId,
+      event,
+      place,
+      phone,
+      date,
+      guests,
+      items,
+      serviceType,
+    } = req.body;
 
-    // Validate customer
+    if (!customerId || !event || !date) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     const user = await User.findById(customerId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "Customer not found" });
 
     const newBooking = new Booking({
       customer: customerId,
@@ -18,51 +32,65 @@ export const createBooking = async (req, res) => {
       date,
       guests,
       items,
+      serviceType,
     });
-    console.log(newBooking, "newBooking");
 
     await newBooking.save();
 
     res.status(201).json({
+      success: true,
       message: "Booking created successfully",
       booking: newBooking,
     });
   } catch (err) {
+    console.error("Error creating booking:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get all bookings
+// =============================
+// 🟡 GET ALL BOOKINGS
+// =============================
 export const getAllBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
       .populate("customer", "name email role")
-      .populate("assignedStaff", "name email role");
+      .populate("assignedStaff", "name email role")
+      .sort({ createdAt: -1 });
 
-    res.status(200).json(bookings);
+    res.status(200).json({ success: true, count: bookings.length, bookings });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get bookings of a specific user
+// =============================
+// 🔵 GET BOOKINGS BY USER
+// =============================
 export const getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ customer: req.params.id })
-      .populate("assignedStaff", "name email role")
-      .populate("customer", "name email role");
+    const { id } = req.params;
 
-    res.status(200).json(bookings);
+    const bookings = await Booking.find({ customer: id })
+      .populate("assignedStaff", "name email role")
+      .populate("customer", "name email role")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, count: bookings.length, bookings });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Update a booking
+// =============================
+// 🟣 UPDATE BOOKING
+// =============================
 export const updateBooking = async (req, res) => {
   try {
+    const { id } = req.params;
+
     const updatedBooking = await Booking.findByIdAndUpdate(
-      req.params.id,
+      id,
       { $set: req.body },
       { new: true, runValidators: true }
     )
@@ -73,6 +101,7 @@ export const updateBooking = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
 
     res.status(200).json({
+      success: true,
       message: "Booking updated successfully",
       booking: updatedBooking,
     });
@@ -81,48 +110,64 @@ export const updateBooking = async (req, res) => {
   }
 };
 
-// Delete a booking
+// =============================
+// 🔴 DELETE BOOKING
+// =============================
 export const deleteBooking = async (req, res) => {
   try {
-    const deletedBooking = await Booking.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+    const deletedBooking = await Booking.findByIdAndDelete(id);
 
     if (!deletedBooking)
       return res.status(404).json({ message: "Booking not found" });
 
-    res.status(200).json({ message: "Booking deleted successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Booking deleted successfully",
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// controllers/booking.controller.js
-
-// Request cancel
+// =============================
+// ⚪ REQUEST BOOKING CANCELLATION (Customer)
+// =============================
 export const requestCancelBooking = async (req, res) => {
   const { id } = req.params;
+
   try {
     const booking = await Booking.findById(id);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-    // Only allow if not already cancelled or completed
-    if (booking.status === "cancelled" || booking.status === "done") {
+    if (booking.status === "cancelled" || booking.status === "completed") {
       return res.status(400).json({ message: "Cannot cancel this booking" });
+    }
+    if (booking.cancelRequest) {
+      return res
+        .status(400)
+        .json({ message: "Cancel request already pending" });
     }
 
     booking.cancelRequest = true;
     await booking.save();
-    console.log(booking, "booking cancell ");
 
-    res.json({ success: true, booking, message: "Cancel request submitted" });
+    res.json({
+      success: true,
+      message: "Cancel request submitted",
+      booking,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Admin approves or rejects cancel
+// =============================
+// ⚫ HANDLE CANCEL APPROVAL (Admin)
+// =============================
 export const handleCancelBooking = async (req, res) => {
   const { id } = req.params;
-  const { approve } = req.body; // true = approve, false = reject
+  const { approve } = req.body;
 
   try {
     const booking = await Booking.findById(id);
@@ -133,18 +178,20 @@ export const handleCancelBooking = async (req, res) => {
     }
 
     if (approve) {
-      booking.status = "cancelled"; // mark as cancelled
+      booking.status = "cancelled";
       booking.cancelRequest = false;
     } else {
-      booking.cancelRequest = false; // reject request
+      booking.cancelRequest = false;
     }
-    console.log(booking, "booking after approve/reject");
 
     await booking.save();
+
     res.json({
       success: true,
+      message: approve
+        ? "Booking cancelled successfully"
+        : "Cancel request rejected",
       booking,
-      message: approve ? "Booking cancelled" : "Cancel request rejected",
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
